@@ -1,7 +1,8 @@
 import json
 from collections import namedtuple
 
-Unit = namedtuple('Unit', ('name', 'pmin', 'pmax', 'ppm', 'fixed_power'))
+Unit = namedtuple('Unit', ('name', 'ppm', 'power_values'))
+# possible power values instead of fixed_power
 
 
 class Inputs:
@@ -26,26 +27,35 @@ class Inputs:
             ppm_co2 = 0.3 * self.fuels['co2(euro/ton)']
             return ppm_fuel + ppm_co2
         elif plant_type == 'turbojet':
+            # Kerosene is not a gas but a liquid
+            # Only gas plants were said to emit CO2
             return self.fuels['kerosine(euro/MWh)'] / plant['efficiency']
 
-    def calculate_power(self, plant):
+    def calculate_power_values(self, plant):
         if plant['type'] == 'windturbine':
             return plant['pmax'] * self.fuels['wind(%)'] / 100
         else:
-            return None
+            return [p for p in range(int(plant['pmin']), int(plant['pmax']) + 1)]
 
     def create_units(self):
-        for pp in self.payload['powerplants']:
-            ppm = self.calculate_ppm(pp)
-            fixed_power = self.calculate_power(pp)
-            yield Unit(pp['name'], pp['pmin'], pp['pmax'], ppm, fixed_power)
+        for powerplant in self.payload['powerplants']:
+            ppm = self.calculate_ppm(powerplant)
+            power_values = self.calculate_power_values(powerplant)
+            yield Unit(powerplant['name'], ppm, power_values)
+
+
+ActiveUnit = namedtuple('ActiveUnit', ('name', 'power'))
 
 
 class UnitCommitmentProblem:
     def __init__(self, inputs):
-        self.units = inputs.units
+        self.units = list(inputs.units)
         self.target_load = inputs.target_load
         self.power = 0
+
+    def sort_units(self):
+        self.units.sort(key=lambda x: x.ppm)
+
 
 
 if __name__ == '__main__':
@@ -53,4 +63,5 @@ if __name__ == '__main__':
     inputs = Inputs(pfile)
     ucp = UnitCommitmentProblem(inputs)
     print(list(ucp.units))
-    print(ucp.target_load)
+    ucp.sort_units()
+    print(list(ucp.units))
