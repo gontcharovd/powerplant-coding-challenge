@@ -51,7 +51,7 @@ class Inputs:
 
 class UnitCommitmentProblem:
     EPSILON = 1e-5
-    POWER_STEP = 0.1
+    STEP = 0.1
 
     def __init__(self, inputs):
         self.units = inputs.units
@@ -84,15 +84,16 @@ class UnitCommitmentProblem:
             return [unit.pfix]
         else:
             return reversed(
-                np.arange(unit.pmin, unit.pmax, self.POWER_STEP))
+                np.arange(unit.pmin, unit.pmax + self.STEP, self.STEP))
 
     def is_valid_power(self, p):
         return self.power_sum + p <= self.load
 
 
 if __name__ == '__main__':
-    pfile = 'example_payloads/payload1.json'
+    pfile = 'example_payloads/payload3.json'
     inputs = Inputs(pfile)
+    print(inputs.units)
     ucp = UnitCommitmentProblem(inputs)
     ucp.solve()
     print(ucp.active_units)
