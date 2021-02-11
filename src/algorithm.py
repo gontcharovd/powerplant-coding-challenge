@@ -1,8 +1,10 @@
 import json
+import numpy as np
+
 from collections import namedtuple
 
-Unit = namedtuple('Unit', ('name', 'ppm', 'power_values'))
-# possible power values instead of fixed_power
+Unit = namedtuple('Unit', ('name', 'ppm', 'pmin', 'pmax', 'pfix'))
+ActiveUnit = namedtuple('ActiveUnit', ('name', 'power'))
 
 
 class Inputs:
@@ -10,7 +12,7 @@ class Inputs:
     def __init__(self, payload_file):
         self.payload = self.read_payload(payload_file)
         self.fuels = self.payload['fuels']
-        self.target_load = self.payload['load']
+        self.load = self.payload['load']
         self.units = self.create_units()
 
     def read_payload(self, file):
@@ -31,37 +33,66 @@ class Inputs:
             # Only gas plants were said to emit CO2
             return self.fuels['kerosine(euro/MWh)'] / plant['efficiency']
 
-    def calculate_power_values(self, plant):
+    def get_fixed_power(self, plant):
         if plant['type'] == 'windturbine':
             return plant['pmax'] * self.fuels['wind(%)'] / 100
         else:
-            return [p for p in range(int(plant['pmin']), int(plant['pmax']) + 1)]
+            return None
 
     def create_units(self):
-        for powerplant in self.payload['powerplants']:
-            ppm = self.calculate_ppm(powerplant)
-            power_values = self.calculate_power_values(powerplant)
-            yield Unit(powerplant['name'], ppm, power_values)
-
-
-ActiveUnit = namedtuple('ActiveUnit', ('name', 'power'))
+        units = []
+        for pp in self.payload['powerplants']:
+            ppm = self.calculate_ppm(pp)
+            pfix = self.get_fixed_power(pp)
+            units.append(Unit(pp['name'], ppm, pp['pmin'], pp['pmax'], pfix))
+        units.sort(key=lambda x: x.ppm)
+        return units
 
 
 class UnitCommitmentProblem:
+    EPSILON = 1e-5
+    POWER_STEP = 0.1
+
     def __init__(self, inputs):
-        self.units = list(inputs.units)
-        self.target_load = inputs.target_load
-        self.power = 0
+        self.units = inputs.units
+        self.active_units = []
+        self.load = inputs.load
+        self.power_sum = 0
+        self.unit_start = 0
+        self.unit_count = len(self.units)
 
-    def sort_units(self):
-        self.units.sort(key=lambda x: x.ppm)
+    def solve(self):
+        if np.abs(self.power_sum - self.load) < self.EPSILON:
+            return
+        else:
+            for unit_i in range(self.unit_start, self.unit_count):
+                unit = self.units[unit_i]
+                for power in self.get_power_values(unit):
+                    if self.is_valid_power(power):
+                        self.power_sum += power
+                        self.unit_start += 1
+                        active_unit = ActiveUnit(unit.name, np.round(power, 2))
+                        self.active_units.append(active_unit)
+                        return self.solve()
+                        # backtracking
+                        self.unit_start -= 1
+                        inactive_unit = self.active_units.pop()
+                        self.power_sum -= inactive_unit.power
 
+    def get_power_values(self, unit):
+        if unit.pfix is not None:
+            return [unit.pfix]
+        else:
+            return reversed(
+                np.arange(unit.pmin, unit.pmax, self.POWER_STEP))
+
+    def is_valid_power(self, p):
+        return self.power_sum + p <= self.load
 
 
 if __name__ == '__main__':
     pfile = 'example_payloads/payload1.json'
     inputs = Inputs(pfile)
     ucp = UnitCommitmentProblem(inputs)
-    print(list(ucp.units))
-    ucp.sort_units()
-    print(list(ucp.units))
+    ucp.solve()
+    print(ucp.active_units)
