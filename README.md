@@ -1,50 +1,46 @@
-# Algorithm
+# powerplant-coding-challenge
 
-1. Determine MO (merit order)
+By [Denis Gontcharov](https://gontcharov.be) for the SPaaS IS team
 
-Payload:
-Extract load and fuels
-Extract powerplants
+## Running the project
 
-Class PowerPlants
-For each powerplant get pmin, pmax and PPM (price per MWh, taking efficiency into account)
+Build and run the Docker image using [docker-compose](https://docs.docker.com/compose/):
 
-2. Solve UCP (Unit Commitment Problem)
+```bash
+docker-compose up
+```
 
-Naive algorithm:
+## Testing the REST API
 
-schedule windmills first because they are free
-if too much wind capacity go to next in MO
-repeat until MO can fill load gap
-if no MO can fill loadgap remove windmill
-schedule next in MO:
-check if pmin not greater than deficit
-schedule until deficit cleared or pmax
+Three tests have been implemented in the `tests/` directory and can be ran with:
 
+```bash
+pytest -rP
+```
 
-# start
-unit_index = 0
-active_units = []
+A request can also be sent manually using a chosen payload file:
 
-# base case
-power_sum == load: problem solved
+```python
+import requests
 
-# validate: helper function
-validate_solution(active_units, p):
-if p + sum(power of active_units) smaller than or equal to load:
-	return True
+url = 'http://127.0.0.1:8888/productionplan/'
+payload = open('example_payloads/payload1.json', 'rb').read()
+response = requests.post(url, data=payload)
+print(response.json())
+```
 
+## API documentation
 
+![alt text](doc/api_doc.png)
 
-# write solver
-active_units = list of power plants and their power
+Go to `127.0.0.1:8888/docs`
 
-if power == load:
-  solution found
-else:
-	for powerplant in range(unit_index:len(units)):
-			for p in [pmin:pmax]: possible power (reverse order):
-					if validate_soultion(p) is True:
-							select this unit and power and unit_index += 1
-							call solver again
-							(if no p found:) active_units.pop() and unit_index -= 1
+This page displays automatic interactive API documentation.
+
+## Input validation
+
+The REST API validates the JSON string in the request body by comparing all
+keys names and value types against the [Pydantic model](https://fastapi.tiangolo.com/tutorial/body-nested-models/)
+definid in `src/main.py`.
+
+***

@@ -16,3 +16,4 @@ def test_payload1(payload_file, expected):
     response = requests.post(url, data=payload)
     assert response.status_code == 200
     assert json.loads(expected) == json.loads(response.json())
+    print(response.json())
