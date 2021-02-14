@@ -4,6 +4,7 @@ import sys
 
 from collections import namedtuple
 
+sys.setrecursionlimit(100000)
 Unit = namedtuple('Unit', ('name', 'ppm', 'pmin', 'pmax', 'pfix'))
 
 
@@ -52,46 +53,25 @@ class ProblemInputs:
 
 class UnitCommitmentProblem:
     EPSILON = 1e-5
-    STEP = 0.1
+    STEP = 1
 
     def __init__(self, inputs):
         self.merit_order = inputs.merit_order
-        self.active_units = []
         self.load = inputs.load
-        self.power_sum = 0
-        self.unit_start = 0
-        self.plant_count = len(self.merit_order)
+        self.plant_power = {unit.name: 0.0 for unit in self.merit_order}
 
     def solve(self):
-        # base case
-        if np.abs(self.power_sum - self.load) < self.EPSILON:
-            # add remaining inactive units with power p=0
-            for unit in self.merit_order:
-                if unit.name not in [u['name'] for u in self.active_units]:
-                    inactive_unit = {
-                        'name': unit.name,
-                        'p': 0
-                    }
-                    self.active_units.append(inactive_unit)
-            return
+        if np.abs(self.get_total_power() - self.load) < self.EPSILON:
+            print(self.plant_power)
+            input("More")
         else:
-            # not allowed to have state!
-            for unit_i in range(self.unit_start, self.plant_count):
-                unit = self.merit_order[unit_i]
-                for power in self.get_power_values(unit):
-                    if self.is_valid_power(power):
-                        self.power_sum += power
-                        self.unit_start += 1
-                        active_unit = {
-                            'name': unit.name,
-                            'p': np.round(power, 2)
-                        }
-                        self.active_units.append(active_unit)
-                        return self.solve()
-                        # backtracking
-                        self.unit_start -= 1
-                        inactive_unit = self.active_units.pop()
-                        self.power_sum -= inactive_unit['p']
+            for unit in self.merit_order:
+                if self.plant_power[unit.name] == 0.0:
+                    for power in self.get_power_values(unit):
+                        if power > 0 and self.is_valid_power(power):
+                            self.plant_power[unit.name] = power
+                            self.solve()
+                            self.plant_power[unit.name] = 0.0
 
     def get_power_values(self, unit):
         if unit.pfix is not None:
@@ -100,16 +80,24 @@ class UnitCommitmentProblem:
             return reversed(
                 np.arange(unit.pmin, unit.pmax + self.STEP, self.STEP))
 
-    def is_valid_power(self, p):
-        return self.power_sum + p <= self.load
+    def get_total_power(self):
+        total_power = 0
+        for power in self.plant_power.values():
+            total_power += power
+        return total_power
+
+    def is_valid_power(self, power):
+        return self.get_total_power() + power <= self.load
 
     def serialize(self):
-        return json.dumps(self.active_units, indent=2)
+        return json.dumps(self.plant_power, indent=2)
 
 
 if __name__ == '__main__':
     payload = 'example_payloads/payload2.json'
     inputs = ProblemInputs(payload)
     ucp = UnitCommitmentProblem(inputs)
+    # print(ucp.plant_power)
+    # print(ucp.merit_order)
     ucp.solve()
-    print(ucp.serialize())
+    # print(ucp.serialize())

@@ -23,17 +23,18 @@ schedule until deficit cleared or pmax
 
 
 # start
-power = 0
 unit_index = 0
-active_units
+active_units = []
 
 # base case
-power == load: problem solved
+power_sum == load: problem solved
 
 # validate: helper function
 validate_solution(active_units, p):
 if p + sum(power of active_units) smaller than or equal to load:
 	return True
+
+
 
 # write solver
 active_units = list of power plants and their power
