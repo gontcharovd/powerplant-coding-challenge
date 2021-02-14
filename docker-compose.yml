@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  rest-api:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    container_name: challenge
+    volumes:
+      - ./src:/opt/challenge/src
+    ports:
+      - 8888:8888
+    restart: always
+    network_mode: host

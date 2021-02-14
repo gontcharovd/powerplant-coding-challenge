@@ -10,7 +10,7 @@ test_data = [
 
 @pytest.mark.parametrize('payload_file, expected', test_data)
 def test_payload1(payload_file, expected):
-    url = 'http://127.0.0.1:8000/productionplan/'
+    url = 'http://127.0.0.1:8888/productionplan/'
     payload = open(payload_file, 'rb').read()
     expected = open(expected, 'rb').read()
     response = requests.post(url, data=payload)
