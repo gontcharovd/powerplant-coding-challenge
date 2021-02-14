@@ -12,7 +12,7 @@ docker-compose up
 
 ## Testing the REST API
 
-Three tests have been implemented in the `tests/` directory and that be run with:
+Three tests have been implemented in the `tests/` directory that can be run with:
 
 ```bash
 pytest -rP
