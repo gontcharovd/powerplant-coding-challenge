@@ -7,15 +7,16 @@ By [Denis Gontcharov](https://gontcharov.be) for the SPaaS IS team
 Build and run the Docker image using [docker-compose](https://docs.docker.com/compose/):
 
 ```bash
-docker-compose up
+docker-compose up -d
 ```
 
 ## Testing the REST API
 
-Three tests have been implemented in the `tests/` directory that can be run with:
+Three tests have been implemented in the `tests/` directory.
+They can be run inside the Docker container with:
 
 ```bash
-pytest -rP
+docker exec -it challenge pytest -rP
 ```
 
 A request can also be sent manually using a chosen payload file:
@@ -28,6 +29,8 @@ payload = open('example_payloads/payload1.json', 'rb').read()
 response = requests.post(url, data=payload)
 print(response.json())
 ```
+
+The Python environment can be recreated from the `docker/requirements.txt` file.
 
 ## API documentation
 

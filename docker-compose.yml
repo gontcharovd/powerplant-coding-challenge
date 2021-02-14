@@ -8,6 +8,8 @@ services:
     container_name: challenge
     volumes:
       - ./src:/opt/challenge/src
+      - ./tests:/opt/challenge/tests
+      - ./example_payloads/:/opt/challenge/example_payloads
     ports:
       - 8888:8888
     restart: always
