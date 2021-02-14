@@ -32,4 +32,4 @@ async def solve_ucp(payload: Payload):
     inputs = ProblemInputs(payload)
     ucp = UnitCommitmentProblem(inputs)
     ucp.solve()
-    return inputs.merit_order, ucp.serialize()
+    return ucp.serialize()
