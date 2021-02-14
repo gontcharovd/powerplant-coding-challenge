@@ -9,8 +9,8 @@ ActiveUnit = namedtuple('ActiveUnit', ('name', 'power'))
 
 class Inputs:
     """Create a merit order based on a payload. """
-    def __init__(self, payload_file):
-        self.payload = self.read_payload(payload_file)
+    def __init__(self, payload):
+        self.payload = payload.dict(by_alias=True)
         self.fuels = self.payload['fuels']
         self.load = self.payload['load']
         self.units = self.create_units()
@@ -25,6 +25,7 @@ class Inputs:
         if plant_type == 'windturbine':
             return 0
         elif plant_type == 'gasfired':
+            print(self.fuels)
             ppm_fuel = self.fuels['gas(euro/MWh)'] / plant['efficiency']
             ppm_co2 = 0.3 * self.fuels['co2(euro/ton)']
             return ppm_fuel + ppm_co2
@@ -88,6 +89,8 @@ class UnitCommitmentProblem:
 
     def is_valid_power(self, p):
         return self.power_sum + p <= self.load
+
+    def serialize(self):
 
 
 if __name__ == '__main__':
