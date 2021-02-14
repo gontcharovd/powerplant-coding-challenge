@@ -1,26 +1,18 @@
-from src.algorithm import Inputs, UnitCommitmentProblem, ActiveUnit
+import json
+import pytest
+import requests
+
+test_data = [
+    (f'example_payloads/payload{i}.json', f'tests/expected/expected{i}.json')
+    for i in range(1, 4)
+]
 
 
-def test_payload1():
-    inputs = Inputs('example_payloads/payload1.json')
-    ucp = UnitCommitmentProblem(inputs)
-    ucp.solve()
-    solution = [
-        ActiveUnit('windpark1', 90),
-        ActiveUnit('windpark2', 21.6),
-        ActiveUnit('gasfiredbig1', 368.4)
-    ]
-    assert all([u == s for u, s in zip(ucp.active_units, solution)])
-
-
-def test_payload3():
-    inputs = Inputs('example_payloads/payload3.json')
-    ucp = UnitCommitmentProblem(inputs)
-    ucp.solve()
-    solution = [
-        ActiveUnit('windpark1', 90),
-        ActiveUnit('windpark2', 21.6),
-        ActiveUnit('gasfiredbig1', 460),
-        ActiveUnit('gasfiredbig2', 338.4)
-    ]
-    assert all([u == s for u, s in zip(ucp.active_units, solution)])
+@pytest.mark.parametrize('payload_file, expected', test_data)
+def test_payload1(payload_file, expected):
+    url = 'http://127.0.0.1:8000/productionplan/'
+    payload = open(payload_file, 'rb').read()
+    expected = open(expected, 'rb').read()
+    response = requests.post(url, data=payload)
+    assert response.status_code == 200
+    assert json.loads(expected) == json.loads(response.json())
