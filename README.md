@@ -33,7 +33,7 @@ print(response.json())
 
 ![alt text](doc/api_doc.png)
 
-Go to [127.0.0.1:8888/docs](127.0.0.1:8888/docs)
+Go to <http://127.0.0.1:8888/docs>
 
 This page displays automatic interactive API documentation.
 
