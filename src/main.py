@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+from src.algorithm import ProblemInputs, UnitCommitmentProblem
 from typing import List
-from src.algorithm import Inputs, UnitCommitmentProblem
 
 app = FastAPI()
 
@@ -29,7 +29,7 @@ class Payload(BaseModel):
 
 @app.post('/productionplan/')
 async def solve_ucp(payload: Payload):
-    inputs = Inputs(payload)
+    inputs = ProblemInputs(payload)
     ucp = UnitCommitmentProblem(inputs)
     ucp.solve()
-    return ucp.active_units
+    return inputs.merit_order, ucp.serialize()
