@@ -43,7 +43,7 @@ This page displays automatic interactive API documentation.
 ## Input validation
 
 The REST API validates the JSON string in the request body by comparing all
-keys names and value types against the [Pydantic model](https://fastapi.tiangolo.com/tutorial/body-nested-models/)
-definid in `src/main.py`.
+key names and value types against the [Pydantic model](https://fastapi.tiangolo.com/tutorial/body-nested-models/)
+defined in `src/main.py`.
 
 ***
