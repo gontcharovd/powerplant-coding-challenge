@@ -1,3 +1,4 @@
 env/
 __pycache__/
 tags
+log/server.log

@@ -1,20 +1,19 @@
 import json
+import logging
 
 from collections import namedtuple
+
+logging.basicConfig(filename='log/server.log', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 Unit = namedtuple('Unit', ('name', 'ppm', 'pmin', 'pmax'))
 
 
-class ProblemInputs:
-    """Create the inputs for the Unit Commitment Problem.
-
-    Calculate the Merit Order based on the payload
-    """
+class MeritOrderCalculation:
+    """Calculate the Merit Order based on the payload. """
     def __init__(self, payload):
-        self.payload = payload.dict(by_alias=True)
+        self.payload = payload
         self.fuels = self.payload['fuels']
-        self.load = self.payload['load']
-        self.merit_order = self.calculate_merit_order()
 
     def calculate_ppm(self, plant):
         """Calculate the price per MWh for each plant.
@@ -22,16 +21,24 @@ class ProblemInputs:
         Kerosene is not a gas: only gas plants were said to emit CO2
         """
         plant_type = plant['type']
-        if plant_type == 'windturbine':
-            return 0
-        elif plant_type == 'gasfired':
-            ppm_fuel = self.fuels['gas(euro/MWh)'] / plant['efficiency']
-            ppm_co2 = 0.3 * self.fuels['co2(euro/ton)']
-            return ppm_fuel + ppm_co2
-        elif plant_type == 'turbojet':
-            return self.fuels['kerosine(euro/MWh)'] / plant['efficiency']
+        assert plant_type in ['windturbine', 'gasfired', 'turbojet']
+        try:
+            if plant_type == 'windturbine':
+                return 0
+            elif plant_type == 'gasfired':
+                ppm_fuel = self.fuels['gas(euro/MWh)'] / plant['efficiency']
+                ppm_co2 = 0.3 * self.fuels['co2(euro/ton)']
+                return ppm_fuel + ppm_co2
+            elif plant_type == 'turbojet':
+                return self.fuels['kerosine(euro/MWh)'] / plant['efficiency']
+        except AssertionError as e:
+            logger.error(
+                f"Invalid plant type '{plant['type']}': "
+                "Must be either 'gasfired', 'turbojet' or 'windturbine'"
+            )
+            raise e
 
-    def calculate_merit_order(self):
+    def calculate(self):
         """Calculate the Merit Order.
 
         The Merit Order is an ordered list of plants by ppm
@@ -50,9 +57,9 @@ class ProblemInputs:
 
 class UnitCommitmentProblem:
     """Implements the solution to the Unit Commitment Problem. """
-    def __init__(self, inputs):
-        self.merit_order = inputs.merit_order
-        self.load = inputs.load
+    def __init__(self, merit_order, load):
+        self.merit_order = merit_order
+        self.load = load
         self.plant_power = {unit.name: 0.0 for unit in self.merit_order}
 
     def solve(self):
@@ -72,21 +79,27 @@ class UnitCommitmentProblem:
               could be found using recursion with backtracking
         """
         for unit_idx, unit in enumerate(self.merit_order):
-            next_unit = None
-            if unit_idx < len(self.merit_order) - 1:
-                next_unit = self.merit_order[unit_idx + 1]
             if unit.pmin + self.get_total_power() <= self.load:
+                # add windturbine power
                 if unit.pmin == unit.pmax:
                     self.plant_power[unit.name] = unit.pmin
                 else:
+                    # load attained
                     if unit.pmax + self.get_total_power() >= self.load:
                         power = self.load - self.get_total_power()
                         self.plant_power[unit.name] = power
-                    elif next_unit:
-                        power = unit.pmax - next_unit.pmin
-                        self.plant_power[unit.name] = power
+                        logger.info('Solution found!')
+                        break
                     else:
-                        print('The solution can not be found')
+                        try:
+                            # add a power to gasfired/turbojet that is small
+                            # enough so that the pmin of the next unit does
+                            # not overshoot the load
+                            next_unit = self.merit_order[unit_idx + 1]
+                            power = unit.pmax - next_unit.pmin
+                            self.plant_power[unit.name] = power
+                        except IndexError:
+                            logger.error('Not enough plants to match load')
 
     def get_total_power(self):
         """Calculate the total power of all units.

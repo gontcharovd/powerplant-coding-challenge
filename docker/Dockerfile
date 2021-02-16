@@ -5,4 +5,4 @@ WORKDIR /opt/challenge
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-CMD uvicorn src.main:app --port 8888
+CMD uvicorn src.rest_api:app --port 8888

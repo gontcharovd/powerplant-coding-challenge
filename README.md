@@ -40,6 +40,12 @@ Go to <http://127.0.0.1:8888/docs>
 
 This page displays automatic interactive API documentation.
 
+## Exception logging
+
+The app logs exceptions in the `algorithm.py` file to the file `log/server.log`.
+
+![alt text](doc/log.png)
+
 ## Input validation
 
 The REST API validates the JSON string in the request body by comparing all
